@@ -196,3 +196,4 @@ Vérifiez les erreurs TypeScript dans la console.
 
 Ce projet est un exemple de démonstration.
 # compta
+# compta
