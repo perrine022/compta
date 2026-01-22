@@ -48,7 +48,7 @@ export function Topbar() {
                 <User className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent className="w-48">
               <DropdownMenuItem>
                 <span>Profil</span>
               </DropdownMenuItem>
