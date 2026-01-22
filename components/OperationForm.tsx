@@ -36,6 +36,7 @@ export function OperationForm({ operation, onSubmit, onCancel }: OperationFormPr
   const [hasVat, setHasVat] = useState(!!operation?.vatRate)
   const [documentFile, setDocumentFile] = useState<File | null>(null)
   const [documentUrl, setDocumentUrl] = useState<string | undefined>(operation?.documentUrl)
+  const [submitStatus, setSubmitStatus] = useState<"draft" | "validated" | null>(null)
   const accounts = accountStore.getAll()
 
   const {
@@ -99,8 +100,8 @@ export function OperationForm({ operation, onSubmit, onCancel }: OperationFormPr
     }
   }
 
-  const onFormSubmit = (data: OperationFormData, status?: "draft" | "validated") => {
-    const finalStatus = status || data.status
+  const onFormSubmit = (data: OperationFormData) => {
+    const finalStatus = submitStatus || data.status
     const operationData: Omit<Operation, "id" | "createdAt"> = {
       ...data,
       status: finalStatus,
@@ -117,6 +118,7 @@ export function OperationForm({ operation, onSubmit, onCancel }: OperationFormPr
       operationStore.create(operationData)
     }
 
+    setSubmitStatus(null)
     onSubmit()
   }
 
@@ -254,14 +256,20 @@ export function OperationForm({ operation, onSubmit, onCancel }: OperationFormPr
         <Button
           type="button"
           variant="outline"
-          onClick={handleSubmit((data) => onFormSubmit(data, "draft"))}
+          onClick={() => {
+            setSubmitStatus("draft")
+            handleSubmit(onFormSubmit)()
+          }}
         >
           Enregistrer brouillon
         </Button>
         <Button
           type="button"
           variant="success"
-          onClick={handleSubmit((data) => onFormSubmit(data, "validated"))}
+          onClick={() => {
+            setSubmitStatus("validated")
+            handleSubmit(onFormSubmit)()
+          }}
         >
           Valider
         </Button>
