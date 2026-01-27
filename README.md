@@ -1,8 +1,8 @@
-# Comptalvoire - Suivi Comptable en Ligne
+# Pilgrim - Marketplace de Pèlerinages
 
-Application web moderne de gestion comptable pour la Côte d'Ivoire, développée avec Next.js 14, TypeScript et TailwindCSS.
+Application web moderne de réservation de pèlerinages et voyages spirituels, développée avec Next.js 14, TypeScript, TailwindCSS et Framer Motion.
 
-**Finance Simplifiée pour Entreprises Africaines**
+**Voyages spécialisés, réservés simplement.**
 
 ## 🚀 Démarrage rapide
 
@@ -32,120 +32,86 @@ npm start
 ## 📁 Structure du projet
 
 ```
-compta/
+pilgrim/
 ├── app/
-│   ├── (auth)/              # Routes d'authentification
-│   │   ├── login/
-│   │   ├── register/
-│   │   └── forgot-password/
-│   ├── (app)/               # Routes de l'application
-│   │   └── app/
-│   │       ├── dashboard/
-│   │       ├── operations/
-│   │       ├── journal/
-│   │       ├── accounts/
-│   │       ├── company-settings/
-│   │       └── exports/
-│   ├── layout.tsx           # Layout racine
-│   ├── page.tsx             # Page d'accueil (redirection)
-│   └── globals.css          # Styles globaux
+│   ├── (auth)/              # Routes d'authentification (non utilisées dans V1)
+│   ├── offers/              # Pages des offres de pèlerinage
+│   │   └── [slug]/         # Page détail d'une offre
+│   ├── bookings/           # Page mes réservations
+│   ├── layout.tsx          # Layout racine
+│   ├── page.tsx            # Page d'accueil
+│   └── globals.css         # Styles globaux
 ├── components/
-│   ├── ui/                  # Composants UI de base (shadcn/ui)
-│   ├── Sidebar.tsx          # Barre latérale de navigation
-│   ├── Topbar.tsx           # Barre supérieure
-│   ├── PageHeader.tsx       # En-tête de page
-│   ├── KpiCard.tsx          # Carte KPI
-│   └── OperationForm.tsx    # Formulaire d'opération
+│   ├── ui/                 # Composants UI de base (shadcn/ui)
+│   ├── OfferCard.tsx       # Carte d'offre de pèlerinage
+│   ├── SearchBar.tsx       # Barre de recherche
+│   ├── StatusBadge.tsx     # Badge de statut (BOOKABLE, ON_REQUEST, SHOWCASE)
+│   ├── CheckoutDrawer.tsx  # Drawer de checkout
+│   └── BookingCard.tsx     # Carte de réservation
 ├── lib/
-│   ├── mockStore.ts         # Store mock avec localStorage
-│   ├── auth.ts              # Gestion de l'authentification mock
-│   ├── export.ts            # Utilitaires d'export (CSV/Excel)
-│   └── utils.ts             # Utilitaires généraux
-└── middleware.ts            # Middleware Next.js
+│   ├── mock-data.ts        # Données mockées des offres de pèlerinage
+│   ├── mock-api.ts         # API mockée (fetchOffers, createCheckout, etc.)
+│   ├── mock-bookings.ts    # Réservations mockées pour démo
+│   ├── storage.ts          # Gestion localStorage pour les réservations
+│   ├── fx.ts               # Conversion de devises
+│   └── utils.ts            # Utilitaires généraux
+└── middleware.ts           # Middleware Next.js
 ```
 
-## 🎨 Personnalisation des couleurs
+## ✨ Fonctionnalités
 
-Les couleurs sont définies dans `tailwind.config.ts`. Pour modifier la palette :
+### Pages principales
 
-```typescript
-// tailwind.config.ts
-theme: {
-  extend: {
-    colors: {
-      primary: {
-        DEFAULT: "#E7862C",  // Orange principal
-        foreground: "#FFFFFF",
-      },
-      accent: {
-        DEFAULT: "#40934B",   // Vert (success)
-        foreground: "#FFFFFF",
-      },
-      background: "#F7F7F7", // Fond global
-      card: "#FFFFFF",        // Fond des cartes
-    },
-  },
-}
-```
+1. **Home (`/`)**
+   - Hero avec image de pèlerinage
+   - Barre de recherche dans le header
+   - Statistiques animées
+   - Section "Qu'est-ce que Pilgrim ?"
+   - Tous les pèlerinages organisés par pays
 
-Les couleurs sont également utilisées dans `app/globals.css` via les variables CSS.
+2. **Détail offre (`/offers/[slug]`)**
+   - Informations complètes sur le pèlerinage
+   - Programme détaillé jour par jour avec photos
+   - Sessions disponibles avec dates et prix
+   - Checkout mock (drawer)
+   - Formulaire "Demander des infos" pour les offres SHOWCASE
 
-## 🔐 Authentification
+3. **Mes réservations (`/bookings`)**
+   - Liste de toutes les réservations
+   - Statuts : CONFIRMED, PENDING_CONFIRMATION, CANCELLED
+   - Actions : voir détails, annuler, télécharger PDF (mock)
+   - État vide avec CTA "Explorer"
 
-L'authentification est simulée via localStorage. Pour la démo :
-- **Login** : Accepte n'importe quel email/password
-- **Register** : Crée un utilisateur et une entreprise
-- Les données sont stockées dans `localStorage` avec les clés préfixées par `compta_`
+### Types d'offres
 
-## 💾 Stockage des données
+- **BOOKABLE** : Confirmation immédiate après paiement
+- **ON_REQUEST** : Confirmation sous 24-48h après paiement
+- **SHOWCASE** : Pas de paiement, formulaire "Demander des infos"
 
-Toutes les données sont stockées dans le `localStorage` du navigateur :
-- `compta_accounts` : Comptes comptables
-- `compta_operations` : Opérations (dépenses/recettes)
-- `compta_journal` : Écritures comptables
-- `compta_company` : Informations de l'entreprise
-- `compta_user` : Utilisateur connecté
+### Multi-devises
 
-Les données de démo sont initialisées automatiquement au premier chargement.
+Support de plusieurs devises avec conversion automatique :
+- EUR (Euro)
+- USD (Dollar américain)
+- GBP (Livre sterling)
 
-## 📊 Fonctionnalités
+Les taux de change sont mockés dans `lib/fx.ts`.
 
-### Dashboard
-- KPIs : Total dépenses, recettes, solde
-- Graphique d'évolution (Recharts)
-- Dernières opérations
+## 🎨 Design System
 
-### Opérations
-- Liste avec filtres (type, compte, statut, recherche)
-- Ajout/modification d'opérations
-- Gestion des justificatifs (upload local)
-- Génération automatique d'écritures comptables
+- **Couleurs principales** :
+  - Dark Green : `#1B4D3E` (primary)
+  - Off-white : `#FAF9F6` (background)
+  - Blanc : `#FFFFFF` (cards)
 
-### Journal
-- Liste des écritures comptables
-- Détail des lignes débit/crédit
-- Filtres par compte et période
+- **Typographie** :
+  - Logo : font-serif (Pilgrim)
+  - Corps : font-sans (système)
 
-### Comptes
-- Gestion des comptes comptables
-- Types : Charge, Produit, Banque, TVA
-- Activation/désactivation
-
-### Paramètres société
-- Informations de l'entreprise
-- Dates d'exercice
-
-### Exports
-- Export CSV des opérations
-- Export Excel des opérations
-- Export CSV du journal
-
-## 🎨 Logo
-
-Pour ajouter le logo de l'entreprise :
-1. Placez votre fichier logo (PNG recommandé) dans `/public/logo.png`
-2. Le logo s'affichera automatiquement dans la sidebar et le header mobile
-3. Si le logo n'est pas trouvé, un placeholder avec "AFK" s'affichera
+- **Animations** :
+  - Framer Motion pour les transitions
+  - Animations au scroll (fade-in, slide-up)
+  - Compteurs animés pour les statistiques
 
 ## 🛠️ Technologies utilisées
 
@@ -153,47 +119,64 @@ Pour ajouter le logo de l'entreprise :
 - **TypeScript**
 - **TailwindCSS**
 - **shadcn/ui** (composants UI)
-- **react-hook-form** + **zod** (formulaires)
-- **recharts** (graphiques)
+- **Framer Motion** (animations)
 - **lucide-react** (icônes)
-- **date-fns** (dates)
-- **xlsx** (export Excel)
+- **date-fns** (gestion des dates)
 
-## 🇨🇮 Configuration Côte d'Ivoire
+## 📝 Données mockées
 
-L'application est configurée pour la Côte d'Ivoire :
-- **Devise** : XOF (Franc CFA)
-- **TVA par défaut** : 18%
-- **Format de date** : français (dd/MM/yyyy)
-- **Localisation** : Abidjan, Côte d'Ivoire
+Toutes les données sont mockées pour la démonstration :
 
-## 📝 Notes
+- **Offres** : 8 pèlerinages dans `lib/mock-data.ts`
+  - Camino de Santiago (Chemin Français et Portugais)
+  - Rome et Vatican
+  - Via Francigena
+  - Lourdes
+  - Chemin de Compostelle - Voie du Puy
+  - Jérusalem et Terre Sainte
 
-- Pas de backend : tout est géré côté client avec localStorage
-- Les écritures comptables sont générées automatiquement lors de la validation d'une opération
-- Les justificatifs sont stockés en local via `URL.createObjectURL` (non persistants)
-- L'application est responsive (mobile-first)
-- Les montants sont formatés en XOF avec séparateurs de milliers
+- **Réservations** : Stockées dans localStorage via `lib/storage.ts`
+- **API** : Simulée avec délais dans `lib/mock-api.ts`
 
-## 🐛 Dépannage
+## 🎯 Pèlerinages disponibles
 
-### Erreur "Module not found"
-```bash
-rm -rf node_modules package-lock.json
-npm install
-```
+### Espagne
+- Camino de Santiago - Chemin Français (35 jours)
+- Camino Português - Chemin Portugais (12 jours)
 
-### Les données ne persistent pas
-Vérifiez que le localStorage n'est pas désactivé dans votre navigateur.
+### Italie
+- Pèlerinage à Rome et au Vatican (7 jours)
+- Via Francigena - Chemin vers Rome (28 jours)
 
-### Problème de build
-```bash
-npm run build
-```
-Vérifiez les erreurs TypeScript dans la console.
+### France
+- Pèlerinage à Lourdes (5 jours)
+- Chemin de Compostelle - Voie du Puy (30 jours)
+
+### Israël
+- Pèlerinage en Terre Sainte - Jérusalem (10 jours)
+- Pèlerinage Terre Sainte - Expérience Premium (12 jours)
+
+## 📱 Responsive
+
+L'application est entièrement responsive avec une approche mobile-first :
+- Header adaptatif avec recherche compacte
+- Grilles de cartes adaptatives
+- Drawer de checkout optimisé mobile
+- Navigation simplifiée sur petits écrans
+
+## 🐛 Notes importantes
+
+- **Front-only** : Aucune dépendance backend
+- **Données mockées** : Toutes les données sont simulées
+- **localStorage** : Les réservations sont stockées localement
+- **Paiement mock** : Le checkout simule un paiement sans vraie transaction
+- **Images** : Utilisation de picsum.photos pour les images placeholder
 
 ## 📄 Licence
 
 Ce projet est un exemple de démonstration.
-# compta
-# compta
+
+---
+
+**Pilgrim** - Parce que chaque pas compte, nous sommes là pour chacun d'entre eux. ✨
+# pilgrim

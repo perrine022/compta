@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "Comptalvoire - Suivi Comptable en Ligne",
-  description: "Finance Simplifiée pour Entreprises Africaines - Côte d'Ivoire",
+  title: "Pilgrim - Marketplace de Voyages Spécialisés",
+  description: "Voyages spécialisés, réservés simplement. Marketplace d'expériences de voyage uniques.",
 }
 
 export default function RootLayout({

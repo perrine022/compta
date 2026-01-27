@@ -1,37 +1,28 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import Image from "next/image"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent } from "@/components/ui/card"
-import {
-  TrendingUp,
-  Shield,
-  Zap,
-  BarChart3,
-  CheckCircle2,
-  ArrowRight,
-  Mail,
-  Phone,
-  MapPin,
-  Send,
-  Sparkles,
-  TrendingDown,
-  Wallet,
-  FileText,
-} from "lucide-react"
-import { auth } from "@/lib/auth"
+import { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
+import { motion, useInView } from 'framer-motion'
+import { ArrowRight, MapPin, Shield, Zap } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { SearchBar } from '@/components/SearchBar'
+import { OfferCard } from '@/components/OfferCard'
+import { mockFetchOffers } from '@/lib/mock-api'
+import { MOCK_OFFERS } from '@/lib/mock-data'
+import type { Offer } from '@/lib/mock-data'
+import type { Currency } from '@/lib/fx'
+import type { OfferStatus } from '@/lib/mock-data'
 
 // Composant pour les compteurs animés
 function AnimatedCounter({ end, duration = 2000, suffix = "" }: { end: number; duration?: number; suffix?: string }) {
   const [count, setCount] = useState(0)
   const countRef = useRef(0)
+  const ref = useRef(null)
+  const isInView = useInView(ref, { once: true })
 
   useEffect(() => {
+    if (!isInView) return
+    
     const increment = end / (duration / 16)
     const timer = setInterval(() => {
       countRef.current += increment
@@ -43,562 +34,436 @@ function AnimatedCounter({ end, duration = 2000, suffix = "" }: { end: number; d
       }
     }, 16)
     return () => clearInterval(timer)
-  }, [end, duration])
+  }, [end, duration, isInView])
 
-  return <span>{count.toLocaleString("fr-FR")}{suffix}</span>
+  return <span ref={ref}>{count.toLocaleString("fr-FR")}{suffix}</span>
 }
 
 export default function HomePage() {
-  const router = useRouter()
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    company: "",
-    message: "",
-  })
-  const [submitted, setSubmitted] = useState(false)
-  const [isVisible, setIsVisible] = useState(false)
+  const [offers, setOffers] = useState<Offer[]>([])
+  const [loading, setLoading] = useState(false)
+  const [departure, setDeparture] = useState('Paris')
+  const [currency, setCurrency] = useState<Currency>('EUR')
+  const [status, setStatus] = useState<OfferStatus | 'ALL'>('ALL')
+  const [hasSearched, setHasSearched] = useState(false)
+  const [allOffersLoaded, setAllOffersLoaded] = useState(false)
 
-  useEffect(() => {
-    setIsVisible(true)
-  }, [])
-
-  const handleStart = () => {
-    if (auth.isAuthenticated()) {
-      router.push("/app/dashboard")
-    } else {
-      router.push("/register")
+  const handleSearch = async () => {
+    setLoading(true)
+    setHasSearched(true)
+    try {
+      const results = await mockFetchOffers({
+        departure,
+        currency,
+        status: status === 'ALL' ? undefined : status,
+      })
+      setOffers(results)
+    } catch (error) {
+      console.error('Error fetching offers:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitted(true)
-    setTimeout(() => setSubmitted(false), 3000)
-    setFormData({ name: "", email: "", company: "", message: "" })
-  }
+  // Charger toutes les offres au chargement pour la section "Tous nos pèlerinages"
+  useEffect(() => {
+    const loadAllOffers = async () => {
+      try {
+        const results = await mockFetchOffers({})
+        setOffers(results)
+        setAllOffersLoaded(true)
+      } catch (error) {
+        console.error('Error loading offers:', error)
+      }
+    }
+    loadAllOffers()
+  }, [])
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
-      {/* Navigation avec glassmorphism */}
-      <nav className="border-b border-gray-200/50 bg-white/70 backdrop-blur-xl sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto px-4 md:px-6 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-              <div className="relative h-12 w-12 flex-shrink-0">
-                <Image
-                  src="/logoo.png"
-                  alt="A.F.K Conseil Comptalvoire"
-                  fill
-                  className="object-contain"
-                  priority
-                />
+    <div className="min-h-screen bg-[#FAF9F6]">
+      {/* Header avec Search Bar */}
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-lg border-b border-gray-200 shadow-sm">
+        <div className="container mx-auto px-4 md:px-6 py-2 md:py-3">
+          <div className="flex items-center gap-4 md:gap-6">
+            {/* Logo */}
+            <a href="/" className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity">
+              <div className="text-xl md:text-2xl font-serif font-bold text-[#1B4D3E]">
+                Pilgrim
               </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Comptalvoire
-              </span>
-            </Link>
-            <div className="flex items-center gap-4">
-              <Link
-                href="/login"
-                className="text-sm font-medium text-gray-600 hover:text-primary transition-colors"
-              >
-                Connexion
-              </Link>
-              <Button
-                onClick={handleStart}
-                className="rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105"
-              >
-                Commencer
-                <ArrowRight className="ml-2 h-4 w-4" />
+            </a>
+            
+            {/* Search Bar */}
+            <div className="flex-1 flex justify-center max-w-2xl mx-4">
+              <SearchBar
+                departure={departure}
+                currency={currency}
+                status={status}
+                onDepartureChange={setDeparture}
+                onCurrencyChange={setCurrency}
+                onStatusChange={setStatus}
+                onSearch={handleSearch}
+                scrollToOffers={true}
+              />
+            </div>
+            
+            {/* Navigation */}
+            <nav className="flex items-center gap-3 md:gap-4 flex-shrink-0">
+              <a href="#all-offers" className="text-xs md:text-sm font-medium text-gray-700 hover:text-[#1B4D3E] transition-colors whitespace-nowrap">
+                Explorer
+              </a>
+              <a href="/bookings" className="text-xs md:text-sm font-medium text-gray-700 hover:text-[#1B4D3E] transition-colors whitespace-nowrap">
+                Mes réservations
+              </a>
+              <Button variant="outline" size="sm" className="text-xs md:text-sm h-8 md:h-9 px-3 md:px-4">
+                Se connecter
               </Button>
-            </div>
+            </nav>
           </div>
         </div>
-      </nav>
+      </header>
 
-      {/* Hero Section avec animations */}
-      <section className="relative py-20 md:py-32 overflow-hidden">
-        {/* Background animé */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/10" />
+      {/* Hero Section avec Image */}
+      <section className="relative h-[70vh] md:h-[80vh] overflow-hidden">
+        {/* Image de fond - Pèlerinage */}
         <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse delay-1000" />
+          <Image
+            src="https://picsum.photos/1920/1080?random=pilgrimage"
+            alt="Pèlerinage - Chemin de Compostelle"
+            fill
+            className="object-cover"
+            priority
+          />
+          {/* Overlay sombre pour la lisibilité */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
         </div>
-
-        <div className="container mx-auto px-4 md:px-6 relative z-10">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className={`space-y-6 ${isVisible ? "animate-fade-in" : "opacity-0"}`}>
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-primary font-medium text-sm">
-                <Sparkles className="h-4 w-4" />
-                Solution #1 en Côte d&apos;Ivoire
-              </div>
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 leading-tight">
-                Finance{" "}
-                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                  Simplifiée
-                </span>{" "}
-                pour Entreprises
+        
+        {/* Contenu du Hero */}
+        <div className="container mx-auto px-4 md:px-6 h-full relative z-10">
+          <div className="h-full flex items-center">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              className="max-w-3xl text-white space-y-6"
+            >
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">
+                Pèlerinages authentiques,
+                <br />
+                <span className="text-white">chemins spirituels.</span>
               </h1>
-              <p className="text-xl text-gray-600 leading-relaxed">
-                Gérez votre comptabilité en ligne avec simplicité. Conçu spécialement pour
-                les entreprises de Côte d&apos;Ivoire avec TVA à 18%.
+              <p className="text-xl md:text-2xl text-white/90 leading-relaxed max-w-2xl">
+                Découvrez les plus beaux pèlerinages du monde : Camino de Santiago, Rome, Jérusalem, Lourdes et bien d'autres. Accompagnement spirituel, hébergements adaptés, réservation simplifiée.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button
-                  size="lg"
-                  onClick={handleStart}
-                  className="rounded-2xl px-8 py-6 text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105 group"
-                >
-                  Commencer gratuitement
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="rounded-2xl px-8 py-6 text-lg border-2 hover:bg-primary/5 transition-all"
-                  onClick={() => {
-                    document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })
-                  }}
-                >
-                  Nous contacter
-                </Button>
-              </div>
-            </div>
-            <div className={`relative ${isVisible ? "animate-slide-in-right" : "opacity-0"}`}>
-              <div className="relative h-[500px] rounded-3xl overflow-hidden shadow-2xl">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center space-y-4">
-                    <div className="w-64 h-64 mx-auto bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-2xl transform hover:scale-110 transition-transform duration-500">
-                      <BarChart3 className="h-32 w-32 text-white" />
-                    </div>
-                    <p className="text-gray-700 font-medium">Gestion Comptable Moderne</p>
-                  </div>
+              <div className="flex flex-wrap gap-4 pt-4">
+                <div className="flex items-center gap-2 text-sm text-white/90">
+                  <Shield className="h-5 w-5" />
+                  <span>Paiement sécurisé</span>
                 </div>
-                {/* Effet glassmorphism */}
-                <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/30">
-                  <div className="flex items-center gap-2 text-white">
-                    <TrendingUp className="h-5 w-5" />
-                    <span className="font-semibold">+25%</span>
-                  </div>
+                <div className="flex items-center gap-2 text-sm text-white/90">
+                  <Zap className="h-5 w-5" />
+                  <span>Confirmation immédiate</span>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Chiffres clés animés */}
-      <section className="py-16 bg-gradient-to-b from-white to-background relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-        <div className="container mx-auto px-4 md:px-6 relative z-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {[
-              { value: 100, suffix: "+", label: "Entreprises", icon: TrendingUp, isPrimary: true },
-              { value: 50000, suffix: "+", label: "Opérations", icon: FileText, isPrimary: false },
-              { value: 99.9, suffix: "%", label: "Disponibilité", icon: Shield, isPrimary: true },
-              { value: 24, suffix: "/7", label: "Support", icon: Zap, isPrimary: false },
-            ].map((stat, idx) => {
-              const Icon = stat.icon
-              return (
-                <Card
-                  key={idx}
-                  className="transition-all duration-300 hover:shadow-xl hover:scale-105 bg-white/80 backdrop-blur-sm shadow-lg"
-                >
-                  <CardContent className="p-6 text-center">
-                    <div className={`h-12 w-12 ${stat.isPrimary ? "bg-primary/10" : "bg-accent/10"} rounded-2xl flex items-center justify-center mx-auto mb-4`}>
-                      <Icon className={`h-6 w-6 ${stat.isPrimary ? "text-primary" : "text-accent"}`} />
-                    </div>
-                    <div className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">
-                      <AnimatedCounter end={stat.value} suffix={stat.suffix} />
-                    </div>
-                    <div className="text-sm text-gray-600 font-medium">{stat.label}</div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Features avec animations */}
-      <section className="py-20 bg-background relative">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Tout ce dont vous avez besoin
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Une solution complète pour gérer votre comptabilité en toute simplicité
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: BarChart3,
-                title: "Dashboard Complet",
-                description: "Visualisez vos dépenses, recettes et soldes en temps réel avec des graphiques interactifs.",
-                isPrimary: true,
-              },
-              {
-                icon: Zap,
-                title: "Gestion Automatique",
-                description: "Génération automatique des écritures comptables lors de la validation des opérations.",
-                isPrimary: false,
-              },
-              {
-                icon: Shield,
-                title: "Sécurisé & Conforme",
-                description: "Conforme aux normes comptables de Côte d'Ivoire avec TVA à 18%.",
-                isPrimary: true,
-              },
-              {
-                icon: TrendingUp,
-                title: "Exports Faciles",
-                description: "Exportez vos données en CSV ou Excel pour vos déclarations fiscales.",
-                isPrimary: false,
-              },
-              {
-                icon: FileText,
-                title: "Journal Comptable",
-                description: "Suivez toutes vos écritures comptables avec un journal détaillé et consultable.",
-                isPrimary: true,
-              },
-              {
-                icon: Wallet,
-                title: "Interface Moderne",
-                description: "Une interface intuitive et responsive, accessible depuis tous vos appareils.",
-                isPrimary: false,
-              },
-            ].map((feature, idx) => {
-              const Icon = feature.icon
-              return (
-                <Card
-                  key={idx}
-                  className="transition-all duration-300 hover:shadow-2xl hover:scale-105 group bg-white shadow-lg"
-                >
-                  <CardContent className="p-6">
-                    <div
-                      className={`h-16 w-16 ${feature.isPrimary ? "bg-gradient-to-br from-primary to-primary/80" : "bg-gradient-to-br from-accent to-accent/80"} rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg`}
-                    >
-                      <Icon className="h-8 w-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">
-                      {feature.title}
-                    </h3>
-                    <p className="text-gray-600 leading-relaxed">{feature.description}</p>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Section avec image de comptable */}
-      <section className="py-20 bg-gradient-to-br from-primary/5 via-white to-accent/5 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
-        <div className="container mx-auto px-4 md:px-6 relative z-10">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="relative">
-              <div className="relative h-[600px] rounded-3xl overflow-hidden shadow-2xl">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20" />
-                <div className="absolute inset-0 flex items-center justify-center p-8">
-                  <div className="text-center space-y-6">
-                    <div className="w-80 h-80 mx-auto bg-gradient-to-br from-white/90 to-white/70 rounded-full flex items-center justify-center shadow-2xl backdrop-blur-sm">
-                      <div className="text-center">
-                        <div className="w-48 h-48 mx-auto bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center mb-4 shadow-xl">
-                          <BarChart3 className="h-24 w-24 text-white" />
-                        </div>
-                        <p className="text-2xl font-bold text-gray-800">Expert Comptable</p>
-                        <p className="text-gray-600 mt-2">À votre service</p>
-                      </div>
-                    </div>
-                  </div>
+                <div className="flex items-center gap-2 text-sm text-white/90">
+                  <MapPin className="h-5 w-5" />
+                  <span>Départ flexible</span>
                 </div>
-                {/* Badges flottants */}
-                <div className="absolute top-8 left-8 bg-white/90 backdrop-blur-md rounded-2xl p-4 shadow-lg animate-bounce-slow">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-accent" />
-                    <span className="font-semibold text-gray-800">Certifié</span>
-                  </div>
-                </div>
-                <div className="absolute bottom-8 right-8 bg-white/90 backdrop-blur-md rounded-2xl p-4 shadow-lg animate-bounce-slow" style={{ animationDelay: '0.5s' }}>
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                    <span className="font-semibold text-gray-800">+50%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-6">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 rounded-full text-accent font-medium text-sm w-fit">
-                <Sparkles className="h-4 w-4" />
-                Solution Professionnelle
-              </div>
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
-                Gestion Comptable{" "}
-                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                  Simplifiée
-                </span>
-              </h2>
-              <p className="text-lg text-gray-600 leading-relaxed">
-                Notre plateforme vous permet de gérer toute votre comptabilité en ligne avec
-                une simplicité déconcertante. Conçue spécialement pour les entreprises de Côte
-                d&apos;Ivoire, elle respecte toutes les normes comptables locales.
-              </p>
-              <div className="space-y-4">
-                {[
-                  "Génération automatique des écritures comptables",
-                  "Conformité TVA 18% Côte d'Ivoire",
-                  "Export pour déclarations fiscales",
-                  "Support 24/7 disponible",
-                ].map((item, idx) => (
-                  <div key={idx} className="flex items-start gap-3">
-                    <div className="h-6 w-6 bg-accent/10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <CheckCircle2 className="h-4 w-4 text-accent" />
-                    </div>
-                    <p className="text-gray-700">{item}</p>
-                  </div>
-                ))}
               </div>
               <Button
                 size="lg"
-                onClick={handleStart}
-                className="rounded-2xl px-8 py-6 text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105 group mt-6"
+                onClick={() => {
+                  document.getElementById('all-offers')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+                className="mt-8 bg-[#1B4D3E] hover:bg-[#1B4D3E]/90 text-white px-8 py-6 text-lg"
               >
-                Démarrer maintenant
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                Voir les offres
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Formulaire de contact moderne */}
-      <section id="contact" className="py-20 bg-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-        <div className="container mx-auto px-4 md:px-6 relative z-10">
-          <div className="max-w-6xl mx-auto">
+      {/* Section Statistiques */}
+      <section className="py-12 md:py-16 bg-white border-b">
+        <div className="container mx-auto px-4 md:px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8"
+          >
+            <div className="text-center p-6 bg-[#FAF9F6] rounded-xl">
+              <div className="text-4xl md:text-5xl font-bold text-[#1B4D3E] mb-2">
+                <AnimatedCounter end={100} suffix="+" />
+              </div>
+              <div className="text-sm md:text-base text-gray-600 font-medium">Destinations sacrées</div>
+            </div>
+            <div className="text-center p-6 bg-[#FAF9F6] rounded-xl">
+              <div className="text-4xl md:text-5xl font-bold text-[#1B4D3E] mb-2">
+                <AnimatedCounter end={50} suffix="+" />
+              </div>
+              <div className="text-sm md:text-base text-gray-600 font-medium">Prestataires vérifiés</div>
+            </div>
+            <div className="text-center p-6 bg-[#FAF9F6] rounded-xl">
+              <div className="text-4xl md:text-5xl font-bold text-[#1B4D3E] mb-2">
+                <AnimatedCounter end={24} suffix="/7" />
+              </div>
+              <div className="text-sm md:text-base text-gray-600 font-medium">Support spirituel</div>
+            </div>
+            <div className="text-center p-6 bg-[#FAF9F6] rounded-xl">
+              <div className="text-4xl md:text-5xl font-bold text-[#1B4D3E] mb-2">
+                <AnimatedCounter end={1000} suffix="+" />
+              </div>
+              <div className="text-sm md:text-base text-gray-600 font-medium">Pèlerins accompagnés</div>
+            </div>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="text-center max-w-3xl mx-auto"
+          >
+            <p className="text-lg md:text-xl text-gray-700 leading-relaxed">
+              Rejoignez une communauté de pèlerins qui ont choisi <strong className="text-[#1B4D3E]">Pilgrim</strong> pour vivre leur cheminement spirituel. 
+              De Santiago à Jérusalem, en passant par Rome et Lourdes, nous vous accompagnons dans chaque étape de votre pèlerinage avec bienveillance et professionnalisme.
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Section Description */}
+      <section className="py-16 md:py-24 bg-white">
+        <div className="container mx-auto px-4 md:px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="max-w-6xl mx-auto"
+          >
             <div className="text-center mb-12">
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                Contactez-nous
+                Qu'est-ce que Pilgrim ?
               </h2>
               <p className="text-xl text-gray-600">
-                Une question ? Nous sommes là pour vous aider
+                Votre compagnon de route vers les chemins sacrés
               </p>
             </div>
-            <div className="grid md:grid-cols-2 gap-12">
-              <div className="space-y-6">
-                <h3 className="text-2xl font-semibold mb-6">Informations de contact</h3>
-                {[
-                  {
-                    icon: Mail,
-                    title: "Email",
-                    content: "contact@comptalvoire.ci",
-                    isPrimary: true,
-                  },
-                  {
-                    icon: Phone,
-                    title: "Téléphone",
-                    content: "+225 XX XX XX XX XX",
-                    isPrimary: false,
-                  },
-                  {
-                    icon: MapPin,
-                    title: "Adresse",
-                    content: "Cocody, Abidjan\nCôte d'Ivoire",
-                    isPrimary: true,
-                  },
-                ].map((info, idx) => {
-                  const Icon = info.icon
-                  return (
-                    <Card
-                      key={idx}
-                      className="transition-all duration-300 hover:shadow-lg hover:scale-105 bg-white shadow-md"
-                    >
-                      <CardContent className="p-6">
-                        <div className="flex items-start gap-4">
-                          <div
-                            className={`h-12 w-12 ${info.isPrimary ? "bg-gradient-to-br from-primary to-primary/80" : "bg-gradient-to-br from-accent to-accent/80"} rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg`}
-                          >
-                            <Icon className="h-6 w-6 text-white" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-900 mb-1">{info.title}</p>
-                            <p className="text-gray-600 whitespace-pre-line">{info.content}</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )
-                })}
-              </div>
-              <Card className="shadow-2xl bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-8">
-                  {submitted ? (
-                    <div className="text-center py-12">
-                      <div className="h-20 w-20 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-6 animate-scale-in">
-                        <CheckCircle2 className="h-12 w-12 text-accent" />
-                      </div>
-                      <h3 className="text-2xl font-semibold mb-2">Message envoyé !</h3>
-                      <p className="text-gray-600">
-                        Nous vous répondrons dans les plus brefs délais.
-                      </p>
-                    </div>
-                  ) : (
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                      <div className="space-y-2">
-                        <Label htmlFor="name" className="text-sm font-semibold">
-                          Nom complet
-                        </Label>
-                        <Input
-                          id="name"
-                          value={formData.name}
-                          onChange={(e) =>
-                            setFormData({ ...formData, name: e.target.value })
-                          }
-                          required
-                          className="rounded-2xl border-2 focus:border-primary transition-colors"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email" className="text-sm font-semibold">
-                          Email
-                        </Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) =>
-                            setFormData({ ...formData, email: e.target.value })
-                          }
-                          required
-                          className="rounded-2xl border-2 focus:border-primary transition-colors"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="company" className="text-sm font-semibold">
-                          Entreprise
-                        </Label>
-                        <Input
-                          id="company"
-                          value={formData.company}
-                          onChange={(e) =>
-                            setFormData({ ...formData, company: e.target.value })
-                          }
-                          className="rounded-2xl border-2 focus:border-primary transition-colors"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="message" className="text-sm font-semibold">
-                          Message
-                        </Label>
-                        <textarea
-                          id="message"
-                          value={formData.message}
-                          onChange={(e) =>
-                            setFormData({ ...formData, message: e.target.value })
-                          }
-                          required
-                          rows={5}
-                          className="flex min-h-[120px] w-full rounded-2xl border-2 border-input bg-background px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors resize-none"
-                        />
-                      </div>
-                      <Button
-                        type="submit"
-                        className="w-full rounded-2xl py-6 text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105 group"
-                        variant="success"
-                      >
-                        <Send className="mr-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                        Envoyer le message
-                      </Button>
-                    </form>
-                  )}
-                </CardContent>
-              </Card>
+
+            {/* Grille avec images et texte */}
+            <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center mb-12">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+                className="relative h-64 md:h-96 rounded-2xl overflow-hidden shadow-lg"
+              >
+                <Image
+                  src="https://picsum.photos/800/600?random=pilgrim1"
+                  alt="Pèlerinage"
+                  fill
+                  className="object-cover"
+                />
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+                className="space-y-4"
+              >
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Transformez votre rêve en réalité
+                </h3>
+                <p className="text-lg text-gray-700 leading-relaxed">
+                  Vous rêvez de marcher sur les pas des pèlerins d'autrefois ? De découvrir les chemins qui mènent à Santiago, Rome, Jérusalem ou Lourdes ? <strong className="text-[#1B4D3E]">Pilgrim</strong> est là pour transformer votre rêve en réalité.
+                </p>
+                <p className="text-lg text-gray-700 leading-relaxed">
+                  Nous vous accompagnons dans votre cheminement spirituel en vous proposant des pèlerinages authentiques vers les lieux saints les plus emblématiques du monde.
+                </p>
+              </motion.div>
             </div>
-          </div>
+
+            <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center mb-12">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="space-y-4 md:order-2"
+              >
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Un accompagnement complet et bienveillant
+                </h3>
+                <p className="text-lg text-gray-700 leading-relaxed">
+                  Nous sommes bien plus qu'une simple plateforme de réservation. <strong className="text-[#1B4D3E]">Pilgrim</strong> est votre partenaire de confiance pour vivre un pèlerinage authentique et profond.
+                </p>
+                <p className="text-lg text-gray-700 leading-relaxed">
+                  Chaque voyage est pensé pour vous : guides spirituels expérimentés à vos côtés, hébergements choisis avec soin, et un accompagnement bienveillant à chaque étape de votre cheminement.
+                </p>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="relative h-64 md:h-96 rounded-2xl overflow-hidden shadow-lg md:order-1"
+              >
+                <Image
+                  src="https://picsum.photos/800/600?random=pilgrim2"
+                  alt="Accompagnement spirituel"
+                  fill
+                  className="object-cover"
+                />
+              </motion.div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                className="relative h-64 md:h-96 rounded-2xl overflow-hidden shadow-lg"
+              >
+                <Image
+                  src="https://picsum.photos/800/600?random=pilgrim3"
+                  alt="Réservation simplifiée"
+                  fill
+                  className="object-cover"
+                />
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                className="space-y-4"
+              >
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Réservation simplifiée, expérience profonde
+                </h3>
+                <p className="text-lg text-gray-700 leading-relaxed">
+                  Que vous partiez seul, en famille ou entre amis, nous vous simplifions la vie : réservez en quelques clics, payez en toute sécurité, et recevez votre confirmation immédiatement.
+                </p>
+                <p className="text-lg text-gray-700 leading-relaxed">
+                  Multi-devises, départs depuis plusieurs villes, et surtout... l'accompagnement spirituel qui manquait à votre voyage.
+                </p>
+                <p className="pt-4 text-xl font-semibold text-[#1B4D3E]">
+                  Parce que chaque pas compte, nous sommes là pour chacun d'entre eux.
+                </p>
+              </motion.div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* Footer moderne */}
-      <footer className="bg-gradient-to-br from-gray-900 to-gray-800 text-white py-16 relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid-pattern opacity-10" />
-        <div className="container mx-auto px-4 md:px-6 relative z-10">
-          <div className="grid md:grid-cols-4 gap-8 mb-12">
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-12 w-12 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center shadow-lg">
-                  <span className="text-white font-bold text-lg">AFK</span>
-                </div>
-                <span className="text-2xl font-bold">Comptalvoire</span>
-              </div>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Finance simplifiée pour entreprises africaines. La solution comptable
-                moderne pour la Côte d&apos;Ivoire.
+      {/* Section Toutes les Offres */}
+      <section id="all-offers" className="py-12 bg-[#FAF9F6]">
+        <div className="container mx-auto px-4 md:px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="mb-8"
+          >
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              Tous nos pèlerinages
+            </h2>
+            <p className="text-lg text-gray-600">
+              Découvrez notre sélection de pèlerinages organisés par destination
+            </p>
+          </motion.div>
+
+          {!allOffersLoaded ? (
+            <div className="text-center py-20">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#1B4D3E]"></div>
+              <p className="mt-4 text-gray-600">Chargement des pèlerinages...</p>
+            </div>
+          ) : (
+            <>
+              {/* Grouper les offres par pays */}
+              {(() => {
+                const offersByCountry = offers.reduce((acc, offer) => {
+                  const country = offer.country || 'Autres'
+                  if (!acc[country]) {
+                    acc[country] = []
+                  }
+                  acc[country].push(offer)
+                  return acc
+                }, {} as Record<string, typeof offers>)
+
+                return Object.entries(offersByCountry).map(([country, countryOffers]) => (
+                  <motion.div
+                    key={country}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5 }}
+                    className="mb-12"
+                  >
+                    <div className="flex items-center gap-3 mb-6">
+                      <h3 className="text-2xl font-bold text-gray-900">{country}</h3>
+                      <div className="flex-1 h-px bg-gray-300"></div>
+                      <span className="text-sm text-gray-500">{countryOffers.length} pèlerinage(s)</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {countryOffers.map((offer) => (
+                        <OfferCard
+                          key={offer.id}
+                          offer={offer}
+                          displayCurrency={currency}
+                        />
+                      ))}
+                    </div>
+                  </motion.div>
+                ))
+              })()}
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* Section Recherche (optionnelle, peut être masquée ou simplifiée) */}
+      {hasSearched && offers.length > 0 && (
+        <section id="explorer" className="py-12 bg-white border-t">
+          <div className="container mx-auto px-4 md:px-6">
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                Résultats de votre recherche
+              </h2>
+              <p className="text-gray-600">
+                {offers.length} pèlerinage(s) trouvé(s) pour un départ depuis {departure}
               </p>
             </div>
-            <div>
-              <h4 className="font-semibold mb-4 text-lg">Produit</h4>
-              <ul className="space-y-3 text-sm text-gray-400">
-                <li>
-                  <Link href="#features" className="hover:text-primary transition-colors">
-                    Fonctionnalités
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/register" className="hover:text-primary transition-colors">
-                    Inscription
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/login" className="hover:text-primary transition-colors">
-                    Connexion
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4 text-lg">Support</h4>
-              <ul className="space-y-3 text-sm text-gray-400">
-                <li>
-                  <Link href="#contact" className="hover:text-primary transition-colors">
-                    Contact
-                  </Link>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-primary transition-colors">
-                    Documentation
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-primary transition-colors">
-                    FAQ
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4 text-lg">Légal</h4>
-              <ul className="space-y-3 text-sm text-gray-400">
-                <li>
-                  <a href="#" className="hover:text-primary transition-colors">
-                    Confidentialité
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-primary transition-colors">
-                    Conditions
-                  </a>
-                </li>
-              </ul>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {offers.map((offer) => (
+                <OfferCard
+                  key={offer.id}
+                  offer={offer}
+                  displayCurrency={currency}
+                />
+              ))}
             </div>
           </div>
-          <div className="border-t border-gray-700 pt-8 text-center text-sm text-gray-400">
-            <p>&copy; 2024 A.F.K Conseil Comptalvoire. Tous droits réservés.</p>
+        </section>
+      )}
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-gray-200 py-8 mt-20">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="flex flex-col md:flex-row items-center justify-between">
+            <a href="/" className="text-xl font-serif font-bold text-[#1B4D3E] mb-3 md:mb-0 cursor-pointer hover:opacity-80 transition-opacity">
+              Pilgrim
+            </a>
+            <p className="text-xs text-gray-500">
+              &copy; 2026 Pilgrim. Tous droits réservés.
+            </p>
           </div>
         </div>
       </footer>
